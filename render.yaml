@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: gym-manager-automation
+    env: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: Asia/Kolkata
+      - key: OWNER_EMAIL
+        sync: false
+      - key: OWNER_WHATSAPP_PHONE
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false

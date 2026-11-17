@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Gym Manager Web App & Automation Server
+  gym-manager-app:
+    build: .
+    container_name: gym_manager_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - TZ=Asia/Kolkata
+      - OWNER_EMAIL=${OWNER_EMAIL:-owner@gym.com}
+      - OWNER_WHATSAPP_PHONE=${OWNER_WHATSAPP_PHONE:-919876543210}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:-}
+    volumes:
+      - ./database/data:/app/database/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional Self-hosted n8n instance (Community Edition)
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: gym_n8n_instance
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - TZ=Asia/Kolkata
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:

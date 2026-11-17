@@ -1,0 +1,30 @@
+{
+  "name": "5 - Error Handler Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "error-trigger-5",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.OWNER_EMAIL || 'support@gym.com' }}",
+        "subject": "=🚨 Gym Automation Error in: {{ $json.workflow.name }}",
+        "message": "=An error occurred in workflow: {{ $json.workflow.name }}\\nExecution ID: {{ $json.execution.id }}\\nError Message: {{ $json.execution.error.message }}\\nTime: {{ $now.setZone('Asia/Kolkata').toISO() }}"
+      },
+      "id": "email-alert-5",
+      "name": "Send Alert Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [[{ "node": "Send Alert Email", "type": "main", "index": 0 }]]
+    }
+  }
+}

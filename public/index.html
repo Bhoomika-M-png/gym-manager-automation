@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gym Manager Automation | Complete Management & n8n Suite</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor / FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20 text-lg">
+          <i class="fa-solid fa-dumbbell"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            Gym Manager <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">Automation v1.0</span>
+          </h1>
+          <p class="text-xs text-slate-400">Google Sheet • WhatsApp Reminders • Payments • Daily Report</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center space-x-3">
+        <span id="currentDateBadge" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
+          <i class="fa-regular fa-calendar text-amber-400"></i>
+          <span id="headerTodayDate">Loading...</span>
+        </span>
+        <button onclick="switchTab('register')" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-2 rounded-lg transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5">
+          <i class="fa-solid fa-user-plus"></i>
+          <span>New Member</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Bar Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/60 overflow-x-auto scrollbar-none flex space-x-1 sm:space-x-2 py-2">
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="nav-tab active-tab">
+        <i class="fa-solid fa-chart-pie"></i> <span>Dashboard</span>
+      </button>
+      <button onclick="switchTab('members')" id="tab-btn-members" class="nav-tab">
+        <i class="fa-solid fa-users"></i> <span>Members (<span id="tabCountAll">0</span>)</span>
+      </button>
+      <button onclick="switchTab('register')" id="tab-btn-register" class="nav-tab">
+        <i class="fa-solid fa-clipboard-list"></i> <span>Front Desk Entry</span>
+      </button>
+      <button onclick="switchTab('reminders')" id="tab-btn-reminders" class="nav-tab">
+        <i class="fa-brands fa-whatsapp text-emerald-400"></i> <span>Expiry Reminders (<span id="tabCountDue">0</span>)</span>
+      </button>
+      <button onclick="switchTab('payments')" id="tab-btn-payments" class="nav-tab">
+        <i class="fa-solid fa-indian-rupee-sign"></i> <span>Payments & Webhook</span>
+      </button>
+      <button onclick="switchTab('report')" id="tab-btn-report" class="nav-tab">
+        <i class="fa-regular fa-file-lines"></i> <span>Daily Owner Report</span>
+      </button>
+      <button onclick="switchTab('sheets')" id="tab-btn-sheets" class="nav-tab">
+        <i class="fa-solid fa-table-cells"></i> <span>Google Sheet Sync</span>
+      </button>
+      <button onclick="switchTab('n8n')" id="tab-btn-n8n" class="nav-tab">
+        <i class="fa-solid fa-diagram-project text-pink-400"></i> <span>n8n Workflows</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- ============================================== -->
+    <!-- TAB 1: DASHBOARD -->
+    <!-- ============================================== -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      <!-- KPI Metric Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Card 1: Total Members -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Total Members</span>
+            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">
+              <i class="fa-solid fa-users"></i>
+            </div>
+          </div>
+          <div class="text-3xl font-extrabold text-white" id="statTotalMembers">0</div>
+          <p class="text-xs text-slate-400 mt-1">Tracked in Google Sheet DB</p>
+        </div>
+
+        <!-- Card 2: Active Members -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Active Members</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+              <i class="fa-solid fa-user-check"></i>
+            </div>
+          </div>
+          <div class="text-3xl font-extrabold text-emerald-400" id="statActiveMembers">0</div>
+          <p class="text-xs text-slate-400 mt-1">Valid membership today</p>
+        </div>
+
+        <!-- Card 3: Expired Members -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Expired</span>
+            <div class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center text-sm">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+          </div>
+          <div class="text-3xl font-extrabold text-red-400" id="statExpiredMembers">0</div>
+          <p class="text-xs text-slate-400 mt-1">Renewal required</p>
+        </div>
+
+        <!-- Card 4: Pending Payments -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Pending Fees</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">
+              <i class="fa-solid fa-indian-rupee-sign"></i>
+            </div>
+          </div>
+          <div class="text-3xl font-extrabold text-amber-400" id="statPendingPayments">0</div>
+          <p class="text-xs text-slate-400 mt-1">Payment status 'Pending'</p>
+        </div>
+      </div>
+
+      <!-- Action Banners & Expiring Alert -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Expiring Soon Alert Box -->
+        <div class="lg:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20 border border-slate-800 rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+              <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+              </span>
+              <h2 class="text-base font-bold text-white">Upcoming Expirations (Next 3 Days)</h2>
+            </div>
+            <button onclick="switchTab('reminders')" class="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1">
+              View All Reminders <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+          <div id="dashboardExpiringList" class="space-y-3">
+            <!-- Populated via JS -->
+            <p class="text-sm text-slate-400">Loading upcoming expirations...</p>
+          </div>
+        </div>
+
+        <!-- Quick System Control & Status -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h2 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-bolt text-amber-400"></i> Automation Status
+            </h2>
+            <p class="text-xs text-slate-400 mb-4">Background schedulers actively monitor member expiry and daily owner metrics.</p>
+            
+            <div class="space-y-2.5 text-xs">
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/50 border border-slate-800">
+                <span class="text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-clock text-amber-400"></i> Daily Expiry Reminder
+                </span>
+                <span class="font-mono text-emerald-400 font-semibold">09:00 AM Daily</span>
+              </div>
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/50 border border-slate-800">
+                <span class="text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-chart-line text-blue-400"></i> Daily Owner Digest
+                </span>
+                <span class="font-mono text-emerald-400 font-semibold">08:00 AM Daily</span>
+              </div>
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/50 border border-slate-800">
+                <span class="text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-globe text-purple-400"></i> Timezone Anchor
+                </span>
+                <span class="font-mono text-slate-300">Asia/Kolkata (IST)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-800/80 mt-4 flex gap-2">
+            <button onclick="triggerRemindersBatch()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2.5 px-3 rounded-xl transition border border-slate-700 text-center flex items-center justify-center gap-1.5">
+              <i class="fa-brands fa-whatsapp text-emerald-400"></i> Run Reminders Now
+            </button>
+            <button onclick="switchTab('report')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2.5 px-3 rounded-xl transition border border-slate-700 text-center flex items-center justify-center gap-1.5">
+              <i class="fa-regular fa-file-lines text-amber-400"></i> View Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 2: MEMBERS DIRECTORY -->
+    <!-- ============================================== -->
+    <section id="tab-members" class="tab-content hidden space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+        <!-- Search Input -->
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="memberSearchInput" placeholder="Search by name, phone (+91...) or Member ID..." oninput="handleMemberSearch()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition">
+        </div>
+
+        <!-- Filter Status Buttons -->
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <button onclick="filterMembers('all')" id="btnFilterAll" class="filter-btn active">All</button>
+          <button onclick="filterMembers('active')" id="btnFilterActive" class="filter-btn">Active</button>
+          <button onclick="filterMembers('expiring_soon')" id="btnFilterExpiring" class="filter-btn">Expiring Soon</button>
+          <button onclick="filterMembers('expired')" id="btnFilterExpired" class="filter-btn">Expired</button>
+          <button onclick="filterMembers('pending')" id="btnFilterPending" class="filter-btn">Pending Payment</button>
+        </div>
+      </div>
+
+      <!-- Members Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950/70 text-slate-400 uppercase font-semibold border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4">Member ID</th>
+                <th class="py-3 px-4">Member Details</th>
+                <th class="py-3 px-4">Plan & Fees</th>
+                <th class="py-3 px-4">Membership Period</th>
+                <th class="py-3 px-4">Expiry Status</th>
+                <th class="py-3 px-4">Payment</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="membersTableBody" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 3: FRONT DESK REGISTRATION (WORKFLOW 1) -->
+    <!-- ============================================== -->
+    <section id="tab-register" class="tab-content hidden">
+      <div class="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+        <div class="mb-6">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-semibold mb-2">
+            <i class="fa-solid fa-tablet-screen-button"></i> Front Desk & Kiosk Tablet Mode
+          </div>
+          <h2 class="text-xl font-bold text-white">New Gym Registration</h2>
+          <p class="text-xs text-slate-400 mt-1">Automatic 91-phone sanitation, month-end rollover calculation, and Google Sheet sync.</p>
+        </div>
+
+        <form id="newMemberForm" onsubmit="handleMemberRegistration(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name *</label>
+              <input type="text" id="regName" required placeholder="e.g. Rohit Kumar" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">WhatsApp Phone *</label>
+              <input type="tel" id="regPhone" required placeholder="e.g. 9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Membership Plan *</label>
+              <select id="regPlan" onchange="updateFormFeeAndExpiry()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                <option value="Monthly" data-months="1" data-fee="1200">Monthly (1 Month)</option>
+                <option value="Quarterly" data-months="3" data-fee="3000">Quarterly (3 Months)</option>
+                <option value="Half-yearly" data-months="6" data-fee="5500">Half-Yearly (6 Months)</option>
+                <option value="Yearly" data-months="12" data-fee="10000">Yearly (12 Months)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Fee (₹) *</label>
+              <input type="number" id="regFee" required value="1200" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Start Date *</label>
+              <input type="date" id="regStartDate" onchange="updateFormFeeAndExpiry()" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+
+          <!-- Calculated Expiry Live Preview -->
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between text-xs">
+            <span class="text-slate-400">Calculated Expiry Date:</span>
+            <span id="regCalculatedExpiry" class="font-mono font-bold text-amber-400 text-sm">--</span>
+          </div>
+
+          <!-- Immediate Payment Checkbox -->
+          <div class="flex items-center space-x-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800/60">
+            <input type="checkbox" id="regPaidImmediately" class="rounded border-slate-700 text-amber-500 focus:ring-0">
+            <label for="regPaidImmediately" class="text-xs text-slate-300 cursor-pointer">
+              Mark as <strong>Paid</strong> immediately (Cash/UPI received upfront)
+            </label>
+          </div>
+
+          <!-- WhatsApp Consent (Chapter 5 & 8) -->
+          <div class="flex items-start space-x-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800/60">
+            <input type="checkbox" id="regConsent" checked class="mt-0.5 rounded border-slate-700 text-amber-500 focus:ring-0">
+            <label for="regConsent" class="text-xs text-slate-400 cursor-pointer">
+              <span class="text-slate-200 font-medium">WhatsApp Opt-in Consent</span> — Mujhe WhatsApp par membership renewal updates aur expiry reminders chahiye (Mandatory for Meta Compliance).
+            </label>
+          </div>
+
+          <button type="submit" id="btnSubmitRegistration" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider transition">
+            Save Member to System
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 4: EXPIRY REMINDERS (WORKFLOW 2) -->
+    <!-- ============================================== -->
+    <section id="tab-reminders" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-brands fa-whatsapp text-emerald-400"></i> WhatsApp Expiry Reminders
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Rule: Sends utility reminders exactly <strong>3 days before</strong> and <strong>on the day of expiry</strong>. Avoids duplicate messages on the same day.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="triggerRemindersBatch()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i> Run Daily Reminders Batch
+          </button>
+        </div>
+      </div>
+
+      <!-- Members due for reminder right now -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+          <i class="fa-regular fa-bell text-amber-400"></i> Eligible for Reminder Today (<span id="eligibleRemindersCount">0</span>)
+        </h3>
+        <div id="eligibleRemindersList" class="space-y-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Reminder Logs -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Reminder Audit Log
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-semibold">
+              <tr>
+                <th class="py-2.5 px-3">Date</th>
+                <th class="py-2.5 px-3">Recipient</th>
+                <th class="py-2.5 px-3">Phone</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3">Message Preview</th>
+              </tr>
+            </thead>
+            <tbody id="reminderLogsTableBody" class="divide-y divide-slate-800">
+              <!-- Logs populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 5: PAYMENTS & WEBHOOK (WORKFLOW 3) -->
+    <!-- ============================================== -->
+    <section id="tab-payments" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Route B: Manual Cash / UPI Recording Form -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="mb-4">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">Route B (Owner Manual Confirm)</span>
+            <h2 class="text-base font-bold text-white mt-2">Record Cash / UPI Payment</h2>
+            <p class="text-xs text-slate-400">Marks membership as Paid and extends expiry date according to plan months.</p>
+          </div>
+
+          <form onsubmit="handleManualPaymentSubmit(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Select Member *</label>
+              <select id="payMemberSelect" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Amount Paid (₹) *</label>
+                <input type="number" id="payAmount" required placeholder="1200" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Payment Mode *</label>
+                <select id="payMode" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition">
+              Confirm & Extend Membership
+            </button>
+          </form>
+        </div>
+
+        <!-- Route A: Razorpay Webhook Simulator & Instructions -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div class="mb-4">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/30">Route A (Razorpay Online Webhook)</span>
+            <h2 class="text-base font-bold text-white mt-2">Test Webhook Event (`payment_link.paid`)</h2>
+            <p class="text-xs text-slate-400">Simulate incoming webhook with HMAC signature & idempotency check.</p>
+          </div>
+
+          <form onsubmit="handleSimulateWebhook(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Target Member *</label>
+              <select id="webhookMemberSelect" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Simulated Razorpay Link ID</label>
+              <input type="text" id="webhookLinkId" placeholder="e.g. plink_test12345 (Leave empty to auto-generate)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1">
+              <div class="text-slate-400">Live Endpoint: <code class="text-amber-400">/api/webhooks/razorpay</code></div>
+              <div class="text-slate-500">Event: <code class="text-slate-300">payment_link.paid</code></div>
+            </div>
+
+            <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition">
+              Fire Simulated Webhook
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Payment Transactions History -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-receipt text-amber-400"></i> Payment Transaction Records
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-semibold">
+              <tr>
+                <th class="py-2.5 px-3">Date</th>
+                <th class="py-2.5 px-3">Member ID</th>
+                <th class="py-2.5 px-3">Name</th>
+                <th class="py-2.5 px-3">Amount</th>
+                <th class="py-2.5 px-3">Mode</th>
+                <th class="py-2.5 px-3">Reference ID</th>
+              </tr>
+            </thead>
+            <tbody id="paymentHistoryTableBody" class="divide-y divide-slate-800">
+              <!-- Logs populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 6: DAILY OWNER REPORT (WORKFLOW 4) -->
+    <!-- ============================================== -->
+    <section id="tab-report" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-regular fa-file-lines text-amber-400"></i> Daily Gym Digest (Chapter 7)
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Compiled automatically each morning at 8:00 AM. Reports exact counts of active, expired, and pending members.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="sendReportEmail()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-regular fa-envelope text-blue-400"></i> Send Email
+          </button>
+          <button onclick="sendReportWhatsApp()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-brands fa-whatsapp text-emerald-400"></i> Send WhatsApp
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Generated Digest Preview -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h3 class="text-xs font-semibold uppercase text-slate-400 mb-2">Email Format Preview (Full Detail)</h3>
+          <pre id="reportFullText" class="w-full bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">Loading report...</pre>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h3 class="text-xs font-semibold uppercase text-slate-400 mb-2">WhatsApp Format Preview (1-Line Template)</h3>
+          <div id="reportWhatsAppText" class="w-full bg-emerald-950/20 p-4 rounded-xl border border-emerald-800/40 font-sans text-xs text-emerald-200 leading-relaxed">Loading summary...</div>
+
+          <div class="mt-6 pt-4 border-t border-slate-800 space-y-2">
+            <h4 class="text-xs font-bold text-slate-300">Target Notification Recipients:</h4>
+            <div class="text-xs text-slate-400">Owner Email: <span id="confOwnerEmail" class="font-mono text-slate-200">owner@gym.com</span></div>
+            <div class="text-xs text-slate-400">Owner WhatsApp: <span id="confOwnerPhone" class="font-mono text-slate-200">+91 98765 00000</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 7: GOOGLE SHEETS SYNC & GUIDE -->
+    <!-- ============================================== -->
+    <section id="tab-sheets" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-table text-emerald-400"></i> Google Sheets 12-Column Database Design
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Exactly conforms to the Chapter 3 & Chapter 6 structure from the guide.</p>
+          </div>
+          <a href="/api/reports/export-csv" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md shadow-emerald-600/20 w-max">
+            <i class="fa-solid fa-download"></i> Download CSV for Google Sheet
+          </a>
+        </div>
+
+        <div class="overflow-x-auto my-4">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950 text-slate-400 font-semibold uppercase">
+              <tr>
+                <th class="p-2.5">Col #</th>
+                <th class="p-2.5">Heading</th>
+                <th class="p-2.5">Format</th>
+                <th class="p-2.5">Managed By</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80 font-mono text-slate-300 text-xs">
+              <tr><td class="p-2 text-slate-500">A</td><td class="p-2 font-bold text-amber-400">member_id</td><td class="p-2">Plain text</td><td class="p-2 text-slate-400">Workflow 1</td></tr>
+              <tr><td class="p-2 text-slate-500">B</td><td class="p-2 font-bold text-amber-400">name</td><td class="p-2">Plain text</td><td class="p-2 text-slate-400">Workflow 1</td></tr>
+              <tr><td class="p-2 text-slate-500">C</td><td class="p-2 font-bold text-amber-400">phone</td><td class="p-2">Plain text (91XXXXXXXXXX)</td><td class="p-2 text-slate-400">Workflow 1</td></tr>
+              <tr><td class="p-2 text-slate-500">D</td><td class="p-2 font-bold text-amber-400">plan</td><td class="p-2">Plain text</td><td class="p-2 text-slate-400">Workflow 1</td></tr>
+              <tr><td class="p-2 text-slate-500">E</td><td class="p-2 font-bold text-amber-400">plan_months</td><td class="p-2">Number (1, 3, 6, 12)</td><td class="p-2 text-slate-400">Workflow 1</td></tr>
+              <tr><td class="p-2 text-slate-500">F</td><td class="p-2 font-bold text-amber-400">fee</td><td class="p-2">Number</td><td class="p-2 text-slate-400">Workflow 1</td></tr>
+              <tr><td class="p-2 text-slate-500">G</td><td class="p-2 font-bold text-amber-400">start_date</td><td class="p-2">Plain text (YYYY-MM-DD)</td><td class="p-2 text-slate-400">Workflow 1</td></tr>
+              <tr><td class="p-2 text-slate-500">H</td><td class="p-2 font-bold text-amber-400">expiry_date</td><td class="p-2">Plain text (YYYY-MM-DD)</td><td class="p-2 text-slate-400">Workflow 1 & 3</td></tr>
+              <tr><td class="p-2 text-slate-500">I</td><td class="p-2 font-bold text-amber-400">payment_status</td><td class="p-2">Plain text (Paid/Pending)</td><td class="p-2 text-slate-400">Workflow 1 & 3</td></tr>
+              <tr><td class="p-2 text-slate-500">J</td><td class="p-2 font-bold text-amber-400">last_payment_date</td><td class="p-2">Plain text (YYYY-MM-DD)</td><td class="p-2 text-slate-400">Workflow 3</td></tr>
+              <tr><td class="p-2 text-slate-500">K</td><td class="p-2 font-bold text-amber-400">last_reminder_date</td><td class="p-2">Plain text (YYYY-MM-DD)</td><td class="p-2 text-slate-400">Workflow 2</td></tr>
+              <tr><td class="p-2 text-slate-500">L</td><td class="p-2 font-bold text-amber-400">last_payment_ref</td><td class="p-2">Plain text (Idempotency Key)</td><td class="p-2 text-slate-400">Workflow 3</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-800">
+          <h3 class="text-sm font-bold text-slate-200 mb-2">Tab 2: Dashboard Formulas (Copy & Paste directly into Sheet)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block mb-1">Total Members:</span>
+              <code class="text-amber-400 select-all">=COUNTA(Members!A2:A)</code>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block mb-1">Active Members:</span>
+              <code class="text-emerald-400 select-all">=SUMPRODUCT((Members!H2:H&lt;&gt;&quot;&quot;)*(Members!H2:H&gt;=TEXT(TODAY(),&quot;yyyy-mm-dd&quot;)))</code>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block mb-1">Expired Members:</span>
+              <code class="text-red-400 select-all">=SUMPRODUCT((Members!H2:H&lt;&gt;&quot;&quot;)*(Members!H2:H&lt;TEXT(TODAY(),&quot;yyyy-mm-dd&quot;)))</code>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-slate-400 block mb-1">Pending Payments:</span>
+              <code class="text-amber-400 select-all">=COUNTIF(Members!I2:I,&quot;Pending&quot;)</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 8: n8n WORKFLOWS -->
+    <!-- ============================================== -->
+    <section id="tab-n8n" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div class="mb-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-diagram-project text-pink-400"></i> Ready-to-Import n8n Workflow JSONs
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Pre-configured workflows matching every node, code block, and parameter from the setup guide. Import directly into your n8n Cloud or self-hosted instance.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Workflow 1 -->
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-amber-400">Workflow 1</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">Chapter 4</span>
+              </div>
+              <h3 class="text-sm font-bold text-white mb-1">New Member Entry</h3>
+              <p class="text-xs text-slate-400">Form Trigger &rarr; Code (addMonths, phone cleanup) &rarr; Append/Update Google Sheet.</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 flex gap-2">
+              <a href="/n8n_workflows/1_new_member_entry.json" download class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download"></i> Download JSON
+              </a>
+            </div>
+          </div>
+
+          <!-- Workflow 2 -->
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-emerald-400">Workflow 2</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">Chapter 5</span>
+              </div>
+              <h3 class="text-sm font-bold text-white mb-1">Expiry Reminder</h3>
+              <p class="text-xs text-slate-400">Schedule (9:00 AM) &rarr; Read Sheet &rarr; Filter [3, 0] days &rarr; WhatsApp Send Template &rarr; Update last_reminder_date.</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 flex gap-2">
+              <a href="/n8n_workflows/2_expiry_reminder.json" download class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download"></i> Download JSON
+              </a>
+            </div>
+          </div>
+
+          <!-- Workflow 3 -->
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-purple-400">Workflow 3</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">Chapter 6</span>
+              </div>
+              <h3 class="text-sm font-bold text-white mb-1">Payment Update</h3>
+              <p class="text-xs text-slate-400">Webhook (payment_link.paid) &rarr; HMAC SHA256 &rarr; Extract &rarr; Compute &rarr; Update Status, Date & Idempotency Ref.</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 flex gap-2">
+              <a href="/n8n_workflows/3_payment_update.json" download class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download"></i> Download JSON
+              </a>
+            </div>
+          </div>
+
+          <!-- Workflow 4 -->
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-blue-400">Workflow 4</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">Chapter 7</span>
+              </div>
+              <h3 class="text-sm font-bold text-white mb-1">Daily Owner Report</h3>
+              <p class="text-xs text-slate-400">Schedule (8:00 AM) &rarr; Read Sheet &rarr; Aggregate Active, Expired, Pending &rarr; Email / WhatsApp Dispatch.</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 flex gap-2">
+              <a href="/n8n_workflows/4_daily_report.json" download class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download"></i> Download JSON
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Record Payment Modal -->
+  <div id="paymentModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-indian-rupee-sign text-emerald-400"></i> Record Member Payment
+        </h3>
+        <button onclick="closePaymentModal()" class="text-slate-400 hover:text-white text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800/80 mb-4 text-xs space-y-1">
+        <div><span class="text-slate-400">Member:</span> <strong id="modalMemberName" class="text-white">--</strong></div>
+        <div><span class="text-slate-400">Phone:</span> <span id="modalMemberPhone" class="font-mono text-slate-300">--</span></div>
+        <div><span class="text-slate-400">Current Expiry:</span> <span id="modalMemberExpiry" class="font-mono text-amber-400">--</span></div>
+      </div>
+
+      <form onsubmit="handleModalPaymentSubmit(event)" class="space-y-4">
+        <input type="hidden" id="modalMemberId">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Amount (₹) *</label>
+          <input type="number" id="modalAmount" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Payment Method *</label>
+          <select id="modalPayMode" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+            <option value="Cash">Cash</option>
+            <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+            <option value="Razorpay">Razorpay</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closePaymentModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 rounded-xl transition">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition">
+            Confirm Payment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="bg-slate-950 border-t border-slate-900 py-4 text-center text-xs text-slate-500">
+    Gym Manager Automation &copy; 2026 &bull; Production Ready &bull; Port 3000
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

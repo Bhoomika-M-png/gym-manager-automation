@@ -1,0 +1,75 @@
+{
+  "name": "1 - New Member Entry",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Gym Registration",
+        "formDescription": "Enter new member details for automated membership management",
+        "formFields": {
+          "values": [
+            { "fieldLabel": "Name", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Phone", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Plan", "fieldType": "dropdown", "fieldOptions": { "values": [
+              { "option": "Monthly" },
+              { "option": "Quarterly" },
+              { "option": "Half-yearly" },
+              { "option": "Yearly" }
+            ]}, "requiredField": true },
+            { "fieldLabel": "Fee", "fieldType": "number", "requiredField": true },
+            { "fieldLabel": "Start Date", "fieldType": "date", "requiredField": true }
+          ]
+        }
+      },
+      "id": "form-trigger-1",
+      "name": "n8n Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const planMonths = { 'Monthly': 1, 'Quarterly': 3, 'Half-yearly': 6, 'Yearly': 12 };\n\nfunction addMonths(isoDate, months) {\n  const [y, m, d] = isoDate.split('-').map(Number);\n  const total = (m - 1) + months;\n  const ny = y + Math.floor(total / 12);\n  const nm = total % 12;\n  const lastDay = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate();\n  const nd = Math.min(d, lastDay);\n  return ny + '-' + String(nm + 1).padStart(2, '0') + '-' + String(nd).padStart(2, '0');\n}\n\nreturn $input.all().map(item => {\n  const f = item.json;\n  let phone = String(f['Phone']).replace(/\\D/g, '');\n  if (phone.length === 10) phone = '91' + phone;\n  const months = planMonths[f['Plan']] || 1;\n  const start = String(f['Start Date']).slice(0, 10);\n  return {\n    json: {\n      member_id: 'GYM-' + String(Date.now()).slice(-6),\n      name: f['Name'],\n      phone: phone,\n      plan: f['Plan'],\n      plan_months: months,\n      fee: f['Fee'],\n      start_date: start,\n      expiry_date: addMonths(start, months),\n      payment_status: 'Pending'\n    }\n  };\n});"
+      },
+      "id": "code-calc-1",
+      "name": "Calculate Expiry & Clean Phone",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "mode": "name", "value": "Gym Manager" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Members" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "member_id": "={{ $json.member_id }}",
+            "name": "={{ $json.name }}",
+            "phone": "={{ $json.phone }}",
+            "plan": "={{ $json.plan }}",
+            "plan_months": "={{ $json.plan_months }}",
+            "fee": "={{ $json.fee }}",
+            "start_date": "={{ $json.start_date }}",
+            "expiry_date": "={{ $json.expiry_date }}",
+            "payment_status": "={{ $json.payment_status }}"
+          },
+          "matchingColumns": ["phone"]
+        }
+      },
+      "id": "sheets-append-1",
+      "name": "Google Sheets (Append or Update)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "n8n Form Trigger": {
+      "main": [[{ "node": "Calculate Expiry & Clean Phone", "type": "main", "index": 0 }]]
+    },
+    "Calculate Expiry & Clean Phone": {
+      "main": [[{ "node": "Google Sheets (Append or Update)", "type": "main", "index": 0 }]]
+    }
+  }
+}

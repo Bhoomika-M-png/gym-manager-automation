@@ -1,0 +1,31 @@
+{
+  "name": "gym-manager-automation",
+  "version": "1.0.0",
+  "description": "Complete Gym Management Automation System with Member Tracking, Expiry Reminders, Payment Updates, Daily Reports & n8n Workflows",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test/test_edge_cases.js",
+    "seed": "node scripts/seed_dummy_members.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.16",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "gym-management",
+    "n8n-automation",
+    "whatsapp-reminders",
+    "razorpay-webhooks",
+    "google-sheets"
+  ],
+  "author": "Antigravity Pair Programmer",
+  "license": "MIT"
+}

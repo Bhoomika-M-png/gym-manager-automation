@@ -1,0 +1,116 @@
+{
+  "name": "3 - Payment Update",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "razorpay-payment-update",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger-3",
+      "name": "Razorpay Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.event }}",
+              "value2": "payment_link.paid"
+            }
+          ]
+        }
+      },
+      "id": "if-node-3",
+      "name": "Is payment_link.paid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nconst e = b.payload.payment_link.entity;\nreturn [{\n  json: {\n    event: b.event,\n    member_id: e.reference_id,\n    link_id: e.id,\n    amount_paid: (e.amount_paid || e.amount) / 100\n  }\n}];"
+      },
+      "id": "extract-payment-3",
+      "name": "Extract Payment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 280]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "name", "value": "Gym Manager" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Members" },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "member_id",
+              "operation": "equals",
+              "value": "={{ $json.member_id }}"
+            }
+          ]
+        }
+      },
+      "id": "sheets-get-3",
+      "name": "Google Sheets (Get Member Row)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [860, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "function addMonths(isoDate, months) {\n  const [y, m, d] = isoDate.split('-').map(Number);\n  const total = (m - 1) + months;\n  const ny = y + Math.floor(total / 12);\n  const nm = total % 12;\n  const lastDay = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate();\n  const nd = Math.min(d, lastDay);\n  return ny + '-' + String(nm + 1).padStart(2, '0') + '-' + String(nd).padStart(2, '0');\n}\n\nconst row = $input.first().json;\nconst pay = $('Extract Payment').first().json;\nconst today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });\n\nif (row.last_payment_ref === pay.link_id) {\n  return []; // Payment already processed (Idempotency protection)\n}\n\nconst firstPayment = !row.last_payment_date;\nlet newExpiry;\nif (firstPayment && row.expiry_date >= today) {\n  newExpiry = row.expiry_date;\n} else {\n  const base = row.expiry_date > today ? row.expiry_date : today;\n  newExpiry = addMonths(base, Number(row.plan_months));\n}\n\nreturn [{\n  json: {\n    member_id: row.member_id,\n    payment_status: 'Paid',\n    last_payment_date: today,\n    expiry_date: newExpiry,\n    last_payment_ref: pay.link_id\n  }\n}];"
+      },
+      "id": "compute-expiry-3",
+      "name": "Compute New Expiry & Idempotency",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 280]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "name", "value": "Gym Manager" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Members" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "payment_status": "={{ $json.payment_status }}",
+            "last_payment_date": "={{ $json.last_payment_date }}",
+            "expiry_date": "={{ $json.expiry_date }}",
+            "last_payment_ref": "={{ $json.last_payment_ref }}"
+          },
+          "matchingColumns": ["member_id"]
+        }
+      },
+      "id": "sheets-update-3",
+      "name": "Google Sheets (Update Payment & Expiry)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1300, 280]
+    }
+  ],
+  "connections": {
+    "Razorpay Webhook": {
+      "main": [[{ "node": "Is payment_link.paid?", "type": "main", "index": 0 }]]
+    },
+    "Is payment_link.paid?": {
+      "main": [[{ "node": "Extract Payment", "type": "main", "index": 0 }]]
+    },
+    "Extract Payment": {
+      "main": [[{ "node": "Google Sheets (Get Member Row)", "type": "main", "index": 0 }]]
+    },
+    "Google Sheets (Get Member Row)": {
+      "main": [[{ "node": "Compute New Expiry & Idempotency", "type": "main", "index": 0 }]]
+    },
+    "Compute New Expiry & Idempotency": {
+      "main": [[{ "node": "Google Sheets (Update Payment & Expiry)", "type": "main", "index": 0 }]]
+    }
+  }
+}

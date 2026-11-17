@@ -1,0 +1,88 @@
+{
+  "name": "4 - Daily Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-4",
+      "name": "Schedule Trigger (8 AM IST)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "name", "value": "Gym Manager" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Members" }
+      },
+      "id": "sheets-read-4",
+      "name": "Google Sheets (Get All Members)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });\nconst rows = $input.all().map(i => i.json).filter(r => r.member_id);\n\nconst active = rows.filter(r => r.expiry_date >= today);\nconst expired = rows.filter(r => r.expiry_date && r.expiry_date < today);\nconst pending = rows.filter(r => r.payment_status === 'Pending');\n\nconst names = list => (list.length ? list.map(r => r.name).join(', ') : 'Koi nahi');\n\nconst text =\n  'Gym report ' + today + '\\n' +\n  'Active members: ' + active.length + '\\n' +\n  'Expired memberships: ' + expired.length + ' (' + names(expired) + ')\\n' +\n  'Pending payments: ' + pending.length + ' (' + names(pending) + ')';\n\nreturn [{\n  json: {\n    date: today,\n    active: active.length,\n    expired: expired.length,\n    pending: pending.length,\n    text\n  }\n}];"
+      },
+      "id": "code-report-4",
+      "name": "Aggregate Metrics & Build Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.OWNER_EMAIL || 'owner@gym.com' }}",
+        "subject": "=Gym report {{ $json.date }}",
+        "message": "={{ $json.text }}"
+      },
+      "id": "email-send-4",
+      "name": "Send Email (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "operation": "sendTemplate",
+        "recipient": "={{ $env.OWNER_WHATSAPP_PHONE || '919876543210' }}",
+        "templateName": "gym_daily_report",
+        "parameters": [
+          { "type": "text", "text": "={{ $json.date }}" },
+          { "type": "text", "text": "={{ $json.active }}" },
+          { "type": "text", "text": "={{ $json.expired }}" },
+          { "type": "text", "text": "={{ $json.pending }}" }
+        ]
+      },
+      "id": "whatsapp-report-4",
+      "name": "WhatsApp (Owner Summary)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [880, 400]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (8 AM IST)": {
+      "main": [[{ "node": "Google Sheets (Get All Members)", "type": "main", "index": 0 }]]
+    },
+    "Google Sheets (Get All Members)": {
+      "main": [[{ "node": "Aggregate Metrics & Build Digest", "type": "main", "index": 0 }]]
+    },
+    "Aggregate Metrics & Build Digest": {
+      "main": [
+        [{ "node": "Send Email (Gmail)", "type": "main", "index": 0 }],
+        [{ "node": "WhatsApp (Owner Summary)", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

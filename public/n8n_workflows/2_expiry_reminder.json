@@ -1,0 +1,94 @@
+{
+  "name": "2 - Expiry Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-2",
+      "name": "Schedule Trigger (9 AM IST)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "name", "value": "Gym Manager" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Members" }
+      },
+      "id": "sheets-read-2",
+      "name": "Google Sheets (Get Rows)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const REMIND_DAYS = [3, 0]; // 3 days before and on the day of expiry\nconst today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });\n\nfunction toUtc(iso) {\n  const [y, m, d] = iso.split('-').map(Number);\n  return Date.UTC(y, m - 1, d);\n}\n\nreturn $input.all().filter(item => {\n  const r = item.json;\n  if (!r.expiry_date || !r.phone) return false;\n  if (r.last_reminder_date === today) return false;\n  const daysLeft = Math.round((toUtc(r.expiry_date) - toUtc(today)) / 86400000);\n  return REMIND_DAYS.includes(daysLeft);\n});"
+      },
+      "id": "code-filter-2",
+      "name": "Filter Expiring Members",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendTemplate",
+        "recipient": "={{ $json.phone }}",
+        "templateName": "gym_membership_expiry_reminder",
+        "parameters": [
+          { "type": "text", "text": "={{ $json.name }}" },
+          { "type": "text", "text": "={{ $json.expiry_date }}" }
+        ]
+      },
+      "id": "whatsapp-send-2",
+      "name": "WhatsApp (Send Template)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [880, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "name", "value": "Gym Manager" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Members" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "last_reminder_date": "={{ $now.setZone('Asia/Kolkata').toFormat('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": ["phone"]
+        }
+      },
+      "id": "sheets-update-2",
+      "name": "Google Sheets (Update last_reminder_date)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1100, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (9 AM IST)": {
+      "main": [[{ "node": "Google Sheets (Get Rows)", "type": "main", "index": 0 }]]
+    },
+    "Google Sheets (Get Rows)": {
+      "main": [[{ "node": "Filter Expiring Members", "type": "main", "index": 0 }]]
+    },
+    "Filter Expiring Members": {
+      "main": [[{ "node": "WhatsApp (Send Template)", "type": "main", "index": 0 }]]
+    },
+    "WhatsApp (Send Template)": {
+      "main": [[{ "node": "Google Sheets (Update last_reminder_date)", "type": "main", "index": 0 }]]
+    }
+  }
+}
