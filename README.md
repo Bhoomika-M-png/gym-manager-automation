@@ -23,7 +23,7 @@
 ### 1. Run Directly on Your Laptop
 ```powershell
 # Navigate to the project directory
-cd C:\Users\ENGG\.gemini\antigravity\scratch\gym-manager-app
+cd C:\Users\ENGG\gym-manager-app
 
 # Install dependencies (already installed)
 npm install

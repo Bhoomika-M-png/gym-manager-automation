@@ -94,11 +94,12 @@ cron.schedule(reportCronExpr, async () => {
   timezone: 'Asia/Kolkata'
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server on 0.0.0.0 (accessible locally and across network/tablets/phones)
+app.listen(PORT, '0.0.0.0', () => {
   console.log('====================================================');
   console.log(`🚀 Gym Manager Automation Server is running on:`);
-  console.log(`👉 http://localhost:${PORT}`);
+  console.log(`👉 Local:   http://localhost:${PORT}`);
+  console.log(`👉 Network: http://192.168.0.145:${PORT}`);
   console.log(`📅 Timezone: Asia/Kolkata`);
   console.log(`⏰ Expiry Reminders Schedule: ${reminderCronExpr}`);
   console.log(`📊 Daily Owner Report Schedule: ${reportCronExpr}`);

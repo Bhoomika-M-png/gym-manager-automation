@@ -24,14 +24,14 @@
     "plan_months": 3,
     "fee": 3000,
     "start_date": "2026-08-22",
-    "expiry_date": "2026-11-20",
+    "expiry_date": "2027-02-20",
     "payment_status": "Paid",
-    "last_payment_date": "2026-08-22",
+    "last_payment_date": "2026-11-17",
     "last_reminder_date": "",
-    "last_payment_ref": "plink_init002",
+    "last_payment_ref": "manual-1794924562453",
     "whatsapp_consent": true,
     "created_at": "2026-11-17T13:45:34.608Z",
-    "updated_at": "2026-11-17T13:45:34.608Z"
+    "updated_at": "2026-11-17T14:09:22.456Z"
   },
   {
     "member_id": "GYM-003",
