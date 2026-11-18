@@ -1,6 +1,6 @@
 # 🏋️ Gym Manager Automation: Complete Working Application & Deployment Suite
 
-> **Based on the blueprint by Sachin Prajapati: "n8n Gym Manager Automation: Complete Setup Guide"**  
+ "n8n Gym Manager Automation: Complete Setup Guide"**  
 > Complete working full-stack application, automated schedulers, WhatsApp reminder engine, Razorpay webhook integration, Google Sheets database synchronization, and pre-built n8n workflow templates.
 
 ---
